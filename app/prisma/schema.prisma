@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  department  String   // IS / FS / SLS / PERM / ITSS / MGMT
+  role        String   // ADMIN / MANAGER / MEMBER / VIEWER
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  assignedTasks     Task[]        @relation("TaskOwner")
+  activities        Activity[]    @relation("ActivityActor")
+  opportunitiesIS   Opportunity[] @relation("OppIS")
+  opportunitiesFS   Opportunity[] @relation("OppFS")
+  opportunitiesBU   Opportunity[] @relation("OppBU")
+  ownedAccounts     Account[]     @relation("AccountOwner")
+}
+
+model Account {
+  id              String   @id @default(cuid())
+  name            String
+  nameKana        String?
+  industry        String?
+  companyType     String?
+  tier            String?
+  contractStatus  String   @default("未契約")
+  mainOwnerId     String?
+  slsNeed         Boolean  @default(false)
+  permNeed        Boolean  @default(false)
+  itssNeed        Boolean  @default(false)
+  address         String?
+  url             String?
+  employeeCount   Int?
+  annualRevenue   String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  mainOwner         User?              @relation("AccountOwner", fields: [mainOwnerId], references: [id])
+  contacts          Contact[]
+  clientDepartments ClientDepartment[]
+  opportunities     Opportunity[]
+  activities        Activity[]         @relation("ActivityAccount")
+}
+
+model Contact {
+  id                 String   @id @default(cuid())
+  accountId          String
+  clientDepartmentId String?
+  lastName           String
+  firstName          String
+  lastNameKana       String?
+  firstNameKana      String?
+  department         String?
+  title              String?
+  keyPersonRole      String?
+  email              String?
+  phone              String?
+  notes              String?
+  createdAt          DateTime @default(now())
+
+  account            Account            @relation(fields: [accountId], references: [id])
+  clientDepartment   ClientDepartment?  @relation(fields: [clientDepartmentId], references: [id])
+  opportunities      Opportunity[]      @relation("OppContact")
+  activities         Activity[]         @relation("ActivityContact")
+  primaryDepartments ClientDepartment[] @relation("DeptPrimaryContact")
+}
+
+model ClientDepartment {
+  id               String   @id @default(cuid())
+  accountId        String
+  name             String
+  primaryContactId String?
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  account        Account       @relation(fields: [accountId], references: [id])
+  primaryContact Contact?      @relation("DeptPrimaryContact", fields: [primaryContactId], references: [id])
+  contacts       Contact[]
+  opportunities  Opportunity[] @relation("OppDept")
+}
+
+model Opportunity {
+  id                  String    @id @default(cuid())
+  parentOpportunityId String?
+  accountId           String
+  clientDepartmentId  String?
+  contactId           String?
+  recordType          String
+  name                String
+  phase               String
+  channel             String?
+  isOwnerId           String?
+  fsOwnerId           String?
+  buOwnerId           String?
+  expectedAmount      Int?
+  expectedCloseDate   DateTime?
+  reapproachDate      DateTime?
+  lostReason          String?
+  powerAgelessUrl     String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  parentOpportunity  Opportunity?       @relation("OppParent", fields: [parentOpportunityId], references: [id])
+  childOpportunities Opportunity[]      @relation("OppParent")
+  account            Account            @relation(fields: [accountId], references: [id])
+  clientDepartment   ClientDepartment?  @relation("OppDept", fields: [clientDepartmentId], references: [id])
+  contact            Contact?           @relation("OppContact", fields: [contactId], references: [id])
+  isOwner            User?              @relation("OppIS", fields: [isOwnerId], references: [id])
+  fsOwner            User?              @relation("OppFS", fields: [fsOwnerId], references: [id])
+  buOwner            User?              @relation("OppBU", fields: [buOwnerId], references: [id])
+  tasks              Task[]
+  activities         Activity[]
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  opportunityId String
+  name          String
+  description   String?
+  ownerId       String
+  status        String    @default("未着手")
+  dueDate       DateTime?
+  priority      String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id])
+  owner       User        @relation("TaskOwner", fields: [ownerId], references: [id])
+}
+
+model Activity {
+  id            String   @id @default(cuid())
+  opportunityId String?
+  accountId     String?
+  contactId     String?
+  activityType  String
+  activityDate  DateTime
+  subject       String
+  content       String?
+  actorId       String
+  createdAt     DateTime @default(now())
+
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  account     Account?     @relation("ActivityAccount", fields: [accountId], references: [id])
+  contact     Contact?     @relation("ActivityContact", fields: [contactId], references: [id])
+  actor       User         @relation("ActivityActor", fields: [actorId], references: [id])
+}

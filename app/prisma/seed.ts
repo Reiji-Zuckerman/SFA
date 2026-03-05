@@ -1,7 +1,24 @@
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import BetterSqlite3 from "better-sqlite3";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 
-const adapter = new PrismaBetterSqlite3({ url: "file:dev.db" });
+// Create tables from migration SQL if DB doesn't have them yet
+const dbPath = join(process.cwd(), "dev.db");
+const isNew = !existsSync(dbPath);
+const sqliteDb = new BetterSqlite3(dbPath);
+if (isNew) {
+  const migrationSql = readFileSync(
+    join(process.cwd(), "prisma/migrations/20260305101024_init/migration.sql"),
+    "utf-8"
+  );
+  sqliteDb.exec(migrationSql);
+  console.log("Database tables created.");
+}
+sqliteDb.close();
+
+const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

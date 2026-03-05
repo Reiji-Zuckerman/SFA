@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Badge, NeedDot } from "@/components/Badge";
+import { DeleteButton } from "@/components/DeleteButton";
+import { deleteAccount } from "@/lib/actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -54,7 +56,11 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <h1 className="text-2xl font-bold mb-2">{account.name}</h1>
             {account.nameKana && <p className="text-sm text-gray-400 mb-3">{account.nameKana}</p>}
           </div>
-          <Badge value={account.contractStatus} />
+          <div className="flex items-center gap-2">
+            <Badge value={account.contractStatus} />
+            <Link href={`/accounts/${id}/edit`} className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">編集</Link>
+            <DeleteButton action={deleteAccount.bind(null, id)} />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -86,7 +92,10 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Contacts */}
         <section className="bg-white rounded-lg shadow p-5">
-          <h2 className="font-bold text-lg mb-4">担当者 ({account.contacts.length})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg">担当者 ({account.contacts.length})</h2>
+            <Link href={`/contacts/new?accountId=${id}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
+          </div>
           <div className="space-y-3">
             {account.contacts.map((c) => (
               <div key={c.id} className="flex items-center justify-between border-b pb-2 text-sm">
@@ -138,7 +147,10 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
 
       {/* Opportunities Tree */}
       <section className="bg-white rounded-lg shadow p-5 mt-6">
-        <h2 className="font-bold text-lg mb-4">商談 ({account.opportunities.length})</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">商談 ({account.opportunities.length})</h2>
+          <Link href={`/opportunities/new?accountId=${id}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
+        </div>
         <div className="space-y-3">
           {rootOpps.map((o) => (
             <OpportunityTree key={o.id} opp={o} allOpps={account.opportunities} depth={0} />
@@ -151,7 +163,10 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
 
       {/* Activities */}
       <section className="bg-white rounded-lg shadow p-5 mt-6">
-        <h2 className="font-bold text-lg mb-4">活動履歴 ({account.activities.length})</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">活動履歴 ({account.activities.length})</h2>
+          <Link href={`/activities/new?accountId=${id}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 記録</Link>
+        </div>
         <div className="space-y-2">
           {account.activities.map((a) => (
             <div key={a.id} className="flex items-start gap-3 text-sm border-b pb-2">

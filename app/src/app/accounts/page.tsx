@@ -17,7 +17,10 @@ export default async function AccountsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">企業一覧</h1>
-        <span className="text-sm text-gray-500">{accounts.length}件</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{accounts.length}件</span>
+          <Link href="/accounts/new" className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">+ 新規作成</Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">

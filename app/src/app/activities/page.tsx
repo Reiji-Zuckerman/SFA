@@ -19,7 +19,10 @@ export default async function ActivitiesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">活動履歴</h1>
-        <span className="text-sm text-gray-500">{activities.length}件</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{activities.length}件</span>
+          <Link href="/activities/new" className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">+ 活動記録</Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -32,6 +35,7 @@ export default async function ActivitiesPage() {
                 </span>
                 <Badge value={a.activityType} />
                 <span className="font-medium text-sm">{a.subject}</span>
+                <Link href={`/activities/${a.id}/edit`} className="text-blue-600 hover:underline text-xs ml-2">編集</Link>
                 <span className="ml-auto text-xs text-gray-500">{a.actor.name}</span>
               </div>
               <div className="flex items-center gap-3 ml-24 text-xs text-gray-500">

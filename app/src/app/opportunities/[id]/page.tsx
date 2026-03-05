@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/Badge";
+import { DeleteButton } from "@/components/DeleteButton";
+import { deleteOpportunity } from "@/lib/actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -69,12 +71,16 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
               )}
             </div>
           </div>
-          {opp.powerAgelessUrl && (
-            <a href={opp.powerAgelessUrl} target="_blank" rel="noopener noreferrer"
-              className="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">
-              パワーエイジレス &rarr;
-            </a>
-          )}
+          <div className="flex items-center gap-2">
+            {opp.powerAgelessUrl && (
+              <a href={opp.powerAgelessUrl} target="_blank" rel="noopener noreferrer"
+                className="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">
+                パワーエイジレス &rarr;
+              </a>
+            )}
+            <Link href={`/opportunities/${id}/edit`} className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">編集</Link>
+            <DeleteButton action={deleteOpportunity.bind(null, id)} />
+          </div>
         </div>
 
         {/* Phase Progress */}
@@ -117,7 +123,10 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         {/* Child Opportunities */}
         {opp.childOpportunities.length > 0 && (
           <section className="bg-white rounded-lg shadow p-5">
-            <h2 className="font-bold text-lg mb-4">子商談 ({opp.childOpportunities.length})</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-lg">子商談 ({opp.childOpportunities.length})</h2>
+              <Link href={`/opportunities/new?parentId=${id}&accountId=${opp.accountId}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
+            </div>
             <div className="space-y-2">
               {opp.childOpportunities.map((c) => (
                 <div key={c.id} className="flex items-center justify-between text-sm border-b pb-2">
@@ -143,7 +152,10 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         {/* Tasks */}
         {(opp.tasks.length > 0 || opp.recordType === "SLS_PROJECT") && (
           <section className="bg-white rounded-lg shadow p-5">
-            <h2 className="font-bold text-lg mb-4">タスク ({opp.tasks.length})</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-lg">タスク ({opp.tasks.length})</h2>
+              <Link href={`/tasks/new?opportunityId=${id}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
+            </div>
             <div className="space-y-2">
               {opp.tasks.map((t) => (
                 <div key={t.id} className="flex items-center justify-between text-sm border-b pb-2">
@@ -172,7 +184,10 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
         {/* Activities */}
         <section className="bg-white rounded-lg shadow p-5">
-          <h2 className="font-bold text-lg mb-4">活動履歴 ({opp.activities.length})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg">活動履歴 ({opp.activities.length})</h2>
+            <Link href={`/activities/new?opportunityId=${id}&accountId=${opp.accountId}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 記録</Link>
+          </div>
           <div className="space-y-2">
             {opp.activities.map((a) => (
               <div key={a.id} className="border-b pb-2 text-sm">

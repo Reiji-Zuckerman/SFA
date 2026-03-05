@@ -20,7 +20,10 @@ export default async function TasksPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">タスク一覧</h1>
-        <span className="text-sm text-gray-500">{tasks.length}件</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{tasks.length}件</span>
+          <Link href="/tasks/new" className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">+ 新規作成</Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -35,6 +38,7 @@ export default async function TasksPage() {
               <th className="py-3 px-4">優先度</th>
               <th className="py-3 px-4">期限</th>
               <th className="py-3 px-4">担当</th>
+              <th className="py-3 px-4"></th>
             </tr>
           </thead>
           <tbody>
@@ -68,6 +72,9 @@ export default async function TasksPage() {
                   ) : "-"}
                 </td>
                 <td className="py-3 px-4 text-gray-500">{t.owner.name}</td>
+                <td className="py-3 px-4">
+                  <Link href={`/tasks/${t.id}/edit`} className="text-blue-600 hover:underline text-xs">編集</Link>
+                </td>
               </tr>
             ))}
           </tbody>

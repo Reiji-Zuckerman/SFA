@@ -14,7 +14,10 @@ export default async function ContactsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">担当者一覧</h1>
-        <span className="text-sm text-gray-500">{contacts.length}件</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{contacts.length}件</span>
+          <Link href="/contacts/new" className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">+ 新規作成</Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -29,6 +32,7 @@ export default async function ContactsPage() {
               <th className="py-3 px-4">事業部</th>
               <th className="py-3 px-4">メール</th>
               <th className="py-3 px-4">電話</th>
+              <th className="py-3 px-4"></th>
             </tr>
           </thead>
           <tbody>
@@ -46,6 +50,9 @@ export default async function ContactsPage() {
                 <td className="py-3 px-4 text-gray-500">{c.clientDepartment?.name || "-"}</td>
                 <td className="py-3 px-4 text-gray-500">{c.email || "-"}</td>
                 <td className="py-3 px-4 text-gray-500">{c.phone || "-"}</td>
+                <td className="py-3 px-4">
+                  <Link href={`/contacts/${c.id}/edit`} className="text-blue-600 hover:underline text-xs">編集</Link>
+                </td>
               </tr>
             ))}
           </tbody>

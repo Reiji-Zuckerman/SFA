@@ -38,7 +38,10 @@ export default async function OpportunitiesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">商談一覧</h1>
-        <span className="text-sm text-gray-500">{opportunities.length}件</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{opportunities.length}件</span>
+          <Link href="/opportunities/new" className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">+ 新規作成</Link>
+        </div>
       </div>
 
       {grouped.map(([type, opps]) => (
@@ -58,6 +61,7 @@ export default async function OpportunitiesPage() {
                   <th className="py-3 px-4">金額</th>
                   <th className="py-3 px-4">担当</th>
                   <th className="py-3 px-4">子商談</th>
+                  <th className="py-3 px-4"></th>
                 </tr>
               </thead>
               <tbody>
@@ -92,6 +96,9 @@ export default async function OpportunitiesPage() {
                         {o._count.childOpportunities > 0 && (
                           <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{o._count.childOpportunities}</span>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Link href={`/opportunities/${o.id}/edit`} className="text-blue-600 hover:underline text-xs">編集</Link>
                       </td>
                     </tr>
                   );

@@ -18,8 +18,9 @@ model User {
 
   assignedTasks     Task[]        @relation("TaskOwner")
   activities        Activity[]    @relation("ActivityActor")
-  opportunitiesIS   Opportunity[] @relation("OppIS")
-  opportunitiesFS   Opportunity[] @relation("OppFS")
+  leadsIS           Lead[]        @relation("LeadIS")
+  leadsFS           Lead[]        @relation("LeadFS")
+  deals             Deal[]        @relation("DealOwner")
   opportunitiesBU   Opportunity[] @relation("OppBU")
   ownedAccounts     Account[]     @relation("AccountOwner")
 }
@@ -47,6 +48,8 @@ model Account {
   mainOwner         User?              @relation("AccountOwner", fields: [mainOwnerId], references: [id])
   contacts          Contact[]
   clientDepartments ClientDepartment[]
+  leads             Lead[]
+  deals             Deal[]
   opportunities     Opportunity[]
   activities        Activity[]         @relation("ActivityAccount")
 }
@@ -88,18 +91,56 @@ model ClientDepartment {
   opportunities  Opportunity[] @relation("OppDept")
 }
 
+// Lead: IS+FSが一貫管理する営業プロセス。契約締結まで1レコード。
+model Lead {
+  id              String    @id @default(cuid())
+  accountId       String
+  name            String
+  phase           String    // リード登録 / 架電中 / アポ取得 / 初回商談 / ニーズ確認 / 基本契約交渉 / 契約締結
+  channel         String?   // 展示会 / 広告 / 紹介 / HP問合せ / 自社開拓 / その他
+  isOwnerId       String?
+  fsOwnerId       String?
+  reapproachDate  DateTime?
+  lostReason      String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  account  Account  @relation(fields: [accountId], references: [id])
+  isOwner  User?    @relation("LeadIS", fields: [isOwnerId], references: [id])
+  fsOwner  User?    @relation("LeadFS", fields: [fsOwnerId], references: [id])
+  deals    Deal[]
+}
+
+// Deal: 商談。Leadが「初回商談」以降に作成可能。シンプルなレコード（フェーズ管理なし）。
+model Deal {
+  id          String   @id @default(cuid())
+  leadId      String
+  accountId   String
+  name        String
+  content     String?  // 商談内容
+  ownerId     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead          Lead          @relation(fields: [leadId], references: [id])
+  account       Account       @relation(fields: [accountId], references: [id])
+  owner         User?         @relation("DealOwner", fields: [ownerId], references: [id])
+  opportunities Opportunity[]
+}
+
+// Opportunity: 事業部が管理する具体的な案件。Deal配下に紐付け。
 model Opportunity {
   id                  String    @id @default(cuid())
   parentOpportunityId String?
+  dealId              String
   accountId           String
   clientDepartmentId  String?
   contactId           String?
-  recordType          String
+  recordType          String    // SLS_PROJECT / PERM_JOB / ITSS_PROJECT / ITSS_JOB
   name                String
   phase               String
-  channel             String?
-  isOwnerId           String?
-  fsOwnerId           String?
   buOwnerId           String?
   expectedAmount      Int?
   expectedCloseDate   DateTime?
@@ -112,11 +153,10 @@ model Opportunity {
 
   parentOpportunity  Opportunity?       @relation("OppParent", fields: [parentOpportunityId], references: [id])
   childOpportunities Opportunity[]      @relation("OppParent")
+  deal               Deal               @relation(fields: [dealId], references: [id])
   account            Account            @relation(fields: [accountId], references: [id])
   clientDepartment   ClientDepartment?  @relation("OppDept", fields: [clientDepartmentId], references: [id])
   contact            Contact?           @relation("OppContact", fields: [contactId], references: [id])
-  isOwner            User?              @relation("OppIS", fields: [isOwnerId], references: [id])
-  fsOwner            User?              @relation("OppFS", fields: [fsOwnerId], references: [id])
   buOwner            User?              @relation("OppBU", fields: [buOwnerId], references: [id])
   tasks              Task[]
   activities         Activity[]

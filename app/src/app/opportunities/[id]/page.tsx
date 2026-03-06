@@ -8,8 +8,6 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 const phaseFlows: Record<string, string[]> = {
-  IS_LEAD: ["リード登録", "架電中", "アポ取得"],
-  FS_DEAL: ["初回商談", "ニーズ確認", "基本契約交渉", "契約締結", "トスアップ済"],
   SLS_PROJECT: ["提案準備", "提案済", "交渉中", "受注", "失注"],
   PERM_JOB: ["ヒアリング", "求人獲得", "紹介中", "成約", "失注"],
   ITSS_PROJECT: ["企画中", "進行中", "完了"],
@@ -23,14 +21,13 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
     where: { id },
     include: {
       account: true,
+      deal: { include: { lead: true } },
       contact: true,
       clientDepartment: true,
-      isOwner: true,
-      fsOwner: true,
       buOwner: true,
       parentOpportunity: true,
       childOpportunities: {
-        include: { buOwner: true, clientDepartment: true },
+        include: { buOwner: true, clientDepartment: true, contact: true },
       },
       tasks: { include: { owner: true }, orderBy: { dueDate: "asc" } },
       activities: {
@@ -48,7 +45,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/opportunities" className="text-blue-600 hover:underline text-sm">&larr; 商談一覧</Link>
+        <Link href="/opportunities" className="text-blue-600 hover:underline text-sm">&larr; 案件一覧</Link>
       </div>
 
       {/* Header */}
@@ -63,10 +60,12 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
               <Link href={`/accounts/${opp.accountId}`} className="text-blue-600 hover:underline">
                 {opp.account.name}
               </Link>
-              {opp.clientDepartment && <span>/ {opp.clientDepartment.name}</span>}
+              {opp.clientDepartment && (
+                <span className="text-blue-600">/ {opp.clientDepartment.name}</span>
+              )}
               {opp.parentOpportunity && (
                 <span>
-                  (元商談: <Link href={`/opportunities/${opp.parentOpportunity.id}`} className="text-blue-600 hover:underline">{opp.parentOpportunity.name}</Link>)
+                  (親案件: <Link href={`/opportunities/${opp.parentOpportunity.id}`} className="text-blue-600 hover:underline">{opp.parentOpportunity.name}</Link>)
                 </span>
               )}
             </div>
@@ -105,13 +104,29 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InfoItem label="フェーズ" value={opp.phase} />
-          <InfoItem label="チャネル" value={opp.channel} />
           <InfoItem label="想定金額" value={opp.expectedAmount ? `¥${opp.expectedAmount.toLocaleString()}` : null} />
           <InfoItem label="受注予定日" value={opp.expectedCloseDate ? new Date(opp.expectedCloseDate).toLocaleDateString("ja-JP") : null} />
-          <InfoItem label="IS担当" value={opp.isOwner?.name} />
-          <InfoItem label="FS担当" value={opp.fsOwner?.name} />
           <InfoItem label="事業部担当" value={opp.buOwner?.name} />
-          <InfoItem label="コンタクト" value={opp.contact ? `${opp.contact.lastName} ${opp.contact.firstName}` : null} />
+          {opp.deal && (
+            <div>
+              <p className="text-xs text-gray-500">商談</p>
+              <p className="text-sm font-medium text-blue-600">{opp.deal.name}</p>
+            </div>
+          )}
+          {opp.contact && (
+            <div>
+              <p className="text-xs text-gray-500">顧客担当者</p>
+              <Link href={`/contacts/${opp.contact.id}`} className="text-sm font-medium text-blue-600 hover:underline">
+                {opp.contact.lastName} {opp.contact.firstName}
+              </Link>
+            </div>
+          )}
+          {opp.clientDepartment && (
+            <div>
+              <p className="text-xs text-gray-500">顧客事業部</p>
+              <p className="text-sm font-medium text-blue-600">{opp.clientDepartment.name}</p>
+            </div>
+          )}
           {opp.reapproachDate && (
             <InfoItem label="再アプローチ予定日" value={new Date(opp.reapproachDate).toLocaleDateString("ja-JP")} />
           )}
@@ -124,8 +139,8 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         {opp.childOpportunities.length > 0 && (
           <section className="bg-white rounded-lg shadow p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-lg">子商談 ({opp.childOpportunities.length})</h2>
-              <Link href={`/opportunities/new?parentId=${id}&accountId=${opp.accountId}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
+              <h2 className="font-bold text-lg">子案件 ({opp.childOpportunities.length})</h2>
+              <Link href={`/opportunities/new?parentId=${id}&accountId=${opp.accountId}&dealId=${opp.dealId}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
             </div>
             <div className="space-y-2">
               {opp.childOpportunities.map((c) => (
@@ -137,6 +152,9 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                     </Link>
                     {c.clientDepartment && (
                       <span className="text-xs text-gray-400">{c.clientDepartment.name}</span>
+                    )}
+                    {c.contact && (
+                      <span className="text-xs text-gray-400">({c.contact.lastName} {c.contact.firstName})</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

@@ -58,6 +58,8 @@ export async function deleteAccount(id: string) {
   await prisma.activity.deleteMany({ where: { opportunityId: { in: oppIds } } });
   await prisma.opportunity.deleteMany({ where: { parentOpportunityId: { in: oppIds } } });
   await prisma.opportunity.deleteMany({ where: { accountId: id } });
+  await prisma.deal.deleteMany({ where: { accountId: id } });
+  await prisma.lead.deleteMany({ where: { accountId: id } });
   await prisma.contact.deleteMany({ where: { accountId: id } });
   await prisma.clientDepartment.deleteMany({ where: { accountId: id } });
   await prisma.account.delete({ where: { id } });
@@ -117,10 +119,96 @@ export async function deleteContact(id: string) {
   redirect("/contacts");
 }
 
+// ========== Lead ==========
+
+export async function createLead(formData: FormData) {
+  const data = {
+    accountId: formData.get("accountId") as string,
+    name: formData.get("name") as string,
+    phase: formData.get("phase") as string,
+    channel: (formData.get("channel") as string) || null,
+    isOwnerId: (formData.get("isOwnerId") as string) || null,
+    fsOwnerId: (formData.get("fsOwnerId") as string) || null,
+    notes: (formData.get("notes") as string) || null,
+  };
+  const lead = await prisma.lead.create({ data });
+  redirect(`/leads/${lead.id}`);
+}
+
+export async function updateLead(id: string, formData: FormData) {
+  const data = {
+    accountId: formData.get("accountId") as string,
+    name: formData.get("name") as string,
+    phase: formData.get("phase") as string,
+    channel: (formData.get("channel") as string) || null,
+    isOwnerId: (formData.get("isOwnerId") as string) || null,
+    fsOwnerId: (formData.get("fsOwnerId") as string) || null,
+    reapproachDate: formData.get("reapproachDate") ? new Date(formData.get("reapproachDate") as string) : null,
+    lostReason: (formData.get("lostReason") as string) || null,
+    notes: (formData.get("notes") as string) || null,
+  };
+  await prisma.lead.update({ where: { id }, data });
+  redirect(`/leads/${id}`);
+}
+
+export async function deleteLead(id: string) {
+  const deals = await prisma.deal.findMany({ where: { leadId: id }, select: { id: true } });
+  const dealIds = deals.map((d) => d.id);
+  const opps = await prisma.opportunity.findMany({ where: { dealId: { in: dealIds } }, select: { id: true } });
+  const oppIds = opps.map((o) => o.id);
+  await prisma.task.deleteMany({ where: { opportunityId: { in: oppIds } } });
+  await prisma.activity.deleteMany({ where: { opportunityId: { in: oppIds } } });
+  await prisma.opportunity.deleteMany({ where: { parentOpportunityId: { in: oppIds } } });
+  await prisma.opportunity.deleteMany({ where: { dealId: { in: dealIds } } });
+  await prisma.deal.deleteMany({ where: { leadId: id } });
+  await prisma.lead.delete({ where: { id } });
+  redirect("/leads");
+}
+
+// ========== Deal ==========
+
+export async function createDeal(formData: FormData) {
+  const data = {
+    leadId: formData.get("leadId") as string,
+    accountId: formData.get("accountId") as string,
+    name: formData.get("name") as string,
+    content: (formData.get("content") as string) || null,
+    ownerId: (formData.get("ownerId") as string) || null,
+    notes: (formData.get("notes") as string) || null,
+  };
+  const deal = await prisma.deal.create({ data });
+  redirect(`/deals/${deal.id}`);
+}
+
+export async function updateDeal(id: string, formData: FormData) {
+  const data = {
+    leadId: formData.get("leadId") as string,
+    accountId: formData.get("accountId") as string,
+    name: formData.get("name") as string,
+    content: (formData.get("content") as string) || null,
+    ownerId: (formData.get("ownerId") as string) || null,
+    notes: (formData.get("notes") as string) || null,
+  };
+  await prisma.deal.update({ where: { id }, data });
+  redirect(`/deals/${id}`);
+}
+
+export async function deleteDeal(id: string) {
+  const opps = await prisma.opportunity.findMany({ where: { dealId: id }, select: { id: true } });
+  const oppIds = opps.map((o) => o.id);
+  await prisma.task.deleteMany({ where: { opportunityId: { in: oppIds } } });
+  await prisma.activity.deleteMany({ where: { opportunityId: { in: oppIds } } });
+  await prisma.opportunity.deleteMany({ where: { parentOpportunityId: { in: oppIds } } });
+  await prisma.opportunity.deleteMany({ where: { dealId: id } });
+  await prisma.deal.delete({ where: { id } });
+  redirect("/deals");
+}
+
 // ========== Opportunity ==========
 
 export async function createOpportunity(formData: FormData) {
   const data = {
+    dealId: formData.get("dealId") as string,
     accountId: formData.get("accountId") as string,
     parentOpportunityId: (formData.get("parentOpportunityId") as string) || null,
     clientDepartmentId: (formData.get("clientDepartmentId") as string) || null,
@@ -128,9 +216,6 @@ export async function createOpportunity(formData: FormData) {
     recordType: formData.get("recordType") as string,
     name: formData.get("name") as string,
     phase: formData.get("phase") as string,
-    channel: (formData.get("channel") as string) || null,
-    isOwnerId: (formData.get("isOwnerId") as string) || null,
-    fsOwnerId: (formData.get("fsOwnerId") as string) || null,
     buOwnerId: (formData.get("buOwnerId") as string) || null,
     expectedAmount: formData.get("expectedAmount") ? parseInt(formData.get("expectedAmount") as string) : null,
     expectedCloseDate: formData.get("expectedCloseDate") ? new Date(formData.get("expectedCloseDate") as string) : null,
@@ -143,6 +228,7 @@ export async function createOpportunity(formData: FormData) {
 
 export async function updateOpportunity(id: string, formData: FormData) {
   const data = {
+    dealId: formData.get("dealId") as string,
     accountId: formData.get("accountId") as string,
     parentOpportunityId: (formData.get("parentOpportunityId") as string) || null,
     clientDepartmentId: (formData.get("clientDepartmentId") as string) || null,
@@ -150,9 +236,6 @@ export async function updateOpportunity(id: string, formData: FormData) {
     recordType: formData.get("recordType") as string,
     name: formData.get("name") as string,
     phase: formData.get("phase") as string,
-    channel: (formData.get("channel") as string) || null,
-    isOwnerId: (formData.get("isOwnerId") as string) || null,
-    fsOwnerId: (formData.get("fsOwnerId") as string) || null,
     buOwnerId: (formData.get("buOwnerId") as string) || null,
     expectedAmount: formData.get("expectedAmount") ? parseInt(formData.get("expectedAmount") as string) : null,
     expectedCloseDate: formData.get("expectedCloseDate") ? new Date(formData.get("expectedCloseDate") as string) : null,

@@ -1,7 +1,7 @@
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import BetterSqlite3 from "better-sqlite3";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, readdirSync } from "fs";
 import { join } from "path";
 
 // Create tables from migration SQL if DB doesn't have them yet
@@ -9,11 +9,16 @@ const dbPath = join(process.cwd(), "dev.db");
 const isNew = !existsSync(dbPath);
 const sqliteDb = new BetterSqlite3(dbPath);
 if (isNew) {
-  const migrationSql = readFileSync(
-    join(process.cwd(), "prisma/migrations/20260305101024_init/migration.sql"),
-    "utf-8"
-  );
-  sqliteDb.exec(migrationSql);
+  const migrationDir = join(process.cwd(), "prisma/migrations");
+  const migrations = readdirSync(migrationDir)
+    .filter((d) => !d.startsWith(".") && d !== "migration_lock.toml")
+    .sort();
+  for (const migration of migrations) {
+    const sqlPath = join(migrationDir, migration, "migration.sql");
+    if (existsSync(sqlPath)) {
+      sqliteDb.exec(readFileSync(sqlPath, "utf-8"));
+    }
+  }
   console.log("Database tables created.");
 }
 sqliteDb.close();
@@ -124,46 +129,86 @@ async function main() {
     data: { id: "d4", accountId: acc4.id, name: "戦略コンサル部", primaryContactId: ct6.id },
   });
 
-  // Opportunities
-  // 1) テックイノベーション: FS完了→SLS+PERM
-  const opp1 = await prisma.opportunity.create({
+  // Leads (旧 IS_LEAD/FS_DEAL → Lead に統合)
+  const lead1 = await prisma.lead.create({
     data: {
-      id: "o1", accountId: acc1.id, contactId: ct1.id, recordType: "FS_DEAL",
-      name: "テックイノベーション 新規開拓", phase: "トスアップ済",
-      channel: "展示会", isOwnerId: suzuki.id, fsOwnerId: sato.id,
-      expectedAmount: 20000000, createdAt: new Date("2026-01-15"),
+      id: "l1", accountId: acc1.id, name: "テックイノベーション 新規開拓",
+      phase: "契約締結", channel: "展示会",
+      isOwnerId: suzuki.id, fsOwnerId: sato.id,
+      createdAt: new Date("2026-01-15"),
     },
   });
+  const lead2 = await prisma.lead.create({
+    data: {
+      id: "l2", accountId: acc2.id, name: "グローバル商事 新規開拓",
+      phase: "基本契約交渉", channel: "紹介",
+      isOwnerId: suzuki.id, fsOwnerId: sato.id,
+      createdAt: new Date("2026-02-01"),
+    },
+  });
+  const lead3 = await prisma.lead.create({
+    data: {
+      id: "l3", accountId: acc3.id, name: "フューチャーシステムズ 新規リード",
+      phase: "架電中", channel: "広告",
+      isOwnerId: suzuki.id,
+    },
+  });
+  const lead4 = await prisma.lead.create({
+    data: {
+      id: "l4", accountId: acc5.id, name: "ネクストウェーブ 展示会リード",
+      phase: "リード登録", channel: "展示会",
+      isOwnerId: suzuki.id,
+    },
+  });
+
+  // Deals (商談)
+  const deal1 = await prisma.deal.create({
+    data: {
+      id: "deal1", leadId: lead1.id, accountId: acc1.id,
+      name: "2026年度 基幹システム刷新",
+      content: "基幹システム刷新に伴うSLS案件+PERM求人",
+      ownerId: sato.id,
+    },
+  });
+  const deal2 = await prisma.deal.create({
+    data: {
+      id: "deal2", leadId: lead2.id, accountId: acc2.id,
+      name: "グローバル商事 DX推進",
+      content: "DX推進PJに伴うITSS人材派遣",
+      ownerId: sato.id,
+    },
+  });
+  const deal3 = await prisma.deal.create({
+    data: {
+      id: "deal3", leadId: lead1.id, accountId: acc4.id,
+      name: "サクラコンサル 人材採用支援",
+      content: "SLS+PERM+ITSS全てのニーズあり",
+      ownerId: sato.id,
+    },
+  });
+
+  // Opportunities (案件: SLS_PROJECT / PERM_JOB / ITSS_PROJECT / ITSS_JOB のみ)
   const opp2 = await prisma.opportunity.create({
     data: {
-      id: "o2", parentOpportunityId: opp1.id, accountId: acc1.id, contactId: ct1.id,
+      id: "o2", dealId: deal1.id, accountId: acc1.id, contactId: ct1.id,
       recordType: "SLS_PROJECT", name: "基幹システム刷新PJ", phase: "交渉中",
-      buOwnerId: yamada.id, isOwnerId: suzuki.id, fsOwnerId: sato.id,
+      buOwnerId: yamada.id,
       expectedAmount: 12000000, expectedCloseDate: new Date("2026-04-15"),
     },
   });
   const opp3 = await prisma.opportunity.create({
     data: {
-      id: "o3", parentOpportunityId: opp1.id, accountId: acc1.id,
+      id: "o3", dealId: deal1.id, accountId: acc1.id,
       clientDepartmentId: dept1.id, contactId: ct1.id,
       recordType: "PERM_JOB", name: "開発部 シニアエンジニア求人", phase: "紹介中",
-      buOwnerId: tanaka.id, isOwnerId: suzuki.id, fsOwnerId: sato.id,
+      buOwnerId: tanaka.id,
       expectedAmount: 3000000, powerAgelessUrl: "https://power-ageless.example.com/jobs/101",
     },
   });
 
-  // 2) グローバル商事: FS完了→ITSS
-  const opp4 = await prisma.opportunity.create({
-    data: {
-      id: "o4", accountId: acc2.id, contactId: ct3.id, recordType: "FS_DEAL",
-      name: "グローバル商事 新規開拓", phase: "トスアップ済",
-      channel: "紹介", isOwnerId: suzuki.id, fsOwnerId: sato.id,
-      expectedAmount: 30000000, createdAt: new Date("2026-02-01"),
-    },
-  });
   const opp5 = await prisma.opportunity.create({
     data: {
-      id: "o5", parentOpportunityId: opp4.id, accountId: acc2.id,
+      id: "o5", dealId: deal2.id, accountId: acc2.id,
       clientDepartmentId: dept3.id, contactId: ct3.id,
       recordType: "ITSS_PROJECT", name: "DX推進プロジェクト", phase: "進行中",
       buOwnerId: takahashi.id,
@@ -171,7 +216,7 @@ async function main() {
   });
   const opp6 = await prisma.opportunity.create({
     data: {
-      id: "o6", parentOpportunityId: opp5.id, accountId: acc2.id,
+      id: "o6", parentOpportunityId: opp5.id, dealId: deal2.id, accountId: acc2.id,
       clientDepartmentId: dept3.id,
       recordType: "ITSS_JOB", name: "SE求人（Java/3名）", phase: "人選中",
       buOwnerId: takahashi.id, expectedAmount: 15000000,
@@ -180,45 +225,17 @@ async function main() {
   });
   const opp7 = await prisma.opportunity.create({
     data: {
-      id: "o7", parentOpportunityId: opp5.id, accountId: acc2.id,
+      id: "o7", parentOpportunityId: opp5.id, dealId: deal2.id, accountId: acc2.id,
       clientDepartmentId: dept3.id,
       recordType: "ITSS_JOB", name: "PM求人（1名）", phase: "ヒアリング",
       buOwnerId: takahashi.id, expectedAmount: 8000000,
     },
   });
 
-  // 3) フューチャーシステムズ: ISリード中
-  const opp8 = await prisma.opportunity.create({
-    data: {
-      id: "o8", accountId: acc3.id, contactId: ct5.id, recordType: "IS_LEAD",
-      name: "フューチャーシステムズ 新規リード", phase: "架電中",
-      channel: "広告", isOwnerId: suzuki.id,
-    },
-  });
-
-  // 4) サクラコンサル: FS商談中
-  const opp9 = await prisma.opportunity.create({
-    data: {
-      id: "o9", accountId: acc4.id, contactId: ct6.id, recordType: "FS_DEAL",
-      name: "サクラコンサル 新規開拓", phase: "ニーズ確認",
-      channel: "HP問合せ", isOwnerId: suzuki.id, fsOwnerId: sato.id,
-      expectedAmount: 50000000,
-    },
-  });
-
-  // 5) ネクストウェーブ: ISリード
-  const opp10 = await prisma.opportunity.create({
-    data: {
-      id: "o10", accountId: acc5.id, contactId: ct7.id, recordType: "IS_LEAD",
-      name: "ネクストウェーブ 展示会リード", phase: "リード登録",
-      channel: "展示会", isOwnerId: suzuki.id,
-    },
-  });
-
-  // 6) PERM失注→リサイクル
+  // PERM失注→リサイクル
   const opp11 = await prisma.opportunity.create({
     data: {
-      id: "o11", parentOpportunityId: opp1.id, accountId: acc1.id,
+      id: "o11", dealId: deal1.id, accountId: acc1.id,
       clientDepartmentId: dept2.id, contactId: ct2.id,
       recordType: "PERM_JOB", name: "インフラ部 インフラエンジニア求人", phase: "失注",
       buOwnerId: tanaka.id, lostReason: "候補者のスキルマッチが難しく見送り",
@@ -244,10 +261,10 @@ async function main() {
       { id: "act2", opportunityId: opp2.id, accountId: acc1.id, contactId: ct1.id, activityType: "WebMTG", activityDate: new Date("2026-02-20"), subject: "初回商談・ニーズ確認", content: "ニーズ確認。SLSで提案方針決定", actorId: sato.id },
       { id: "act3", opportunityId: opp2.id, accountId: acc1.id, contactId: ct1.id, activityType: "往訪", activityDate: new Date("2026-02-28"), subject: "提案実施", content: "提案実施。好感触。予算確認中", actorId: yamada.id },
       { id: "act4", opportunityId: opp2.id, accountId: acc1.id, contactId: ct1.id, activityType: "WebMTG", activityDate: new Date("2026-03-04"), subject: "価格交渉ミーティング", content: "予算は1,200万で承認を得ている。スコープについて一部縮小の要望あり。来週月曜までに修正提案書を送付する約束", actorId: yamada.id },
-      { id: "act5", opportunityId: opp4.id, accountId: acc2.id, contactId: ct3.id, activityType: "架電", activityDate: new Date("2026-02-01"), subject: "紹介経由 初回コール", content: "紹介元の○○氏経由。DX推進のニーズあり", actorId: suzuki.id },
-      { id: "act6", opportunityId: opp4.id, accountId: acc2.id, contactId: ct3.id, activityType: "往訪", activityDate: new Date("2026-02-10"), subject: "初回商談", content: "ITSS人材派遣のニーズ確認。DX推進PJにSE3名+PM1名希望", actorId: sato.id },
-      { id: "act7", opportunityId: opp8.id, accountId: acc3.id, contactId: ct5.id, activityType: "架電", activityDate: new Date("2026-03-03"), subject: "初回架電", content: "広告経由。まだ検討段階。来週再度架電予定", actorId: suzuki.id },
-      { id: "act8", opportunityId: opp9.id, accountId: acc4.id, contactId: ct6.id, activityType: "WebMTG", activityDate: new Date("2026-03-02"), subject: "初回商談", content: "SLS+PERM+ITSS全てのニーズあり。規模が大きい。次回詳細ヒアリング予定", actorId: sato.id },
+      { id: "act5", accountId: acc2.id, contactId: ct3.id, activityType: "架電", activityDate: new Date("2026-02-01"), subject: "紹介経由 初回コール", content: "紹介元の○○氏経由。DX推進のニーズあり", actorId: suzuki.id },
+      { id: "act6", opportunityId: opp5.id, accountId: acc2.id, contactId: ct3.id, activityType: "往訪", activityDate: new Date("2026-02-10"), subject: "初回商談", content: "ITSS人材派遣のニーズ確認。DX推進PJにSE3名+PM1名希望", actorId: sato.id },
+      { id: "act7", accountId: acc3.id, contactId: ct5.id, activityType: "架電", activityDate: new Date("2026-03-03"), subject: "初回架電", content: "広告経由。まだ検討段階。来週再度架電予定", actorId: suzuki.id },
+      { id: "act8", accountId: acc4.id, contactId: ct6.id, activityType: "WebMTG", activityDate: new Date("2026-03-02"), subject: "初回商談", content: "SLS+PERM+ITSS全てのニーズあり。規模が大きい。次回詳細ヒアリング予定", actorId: sato.id },
       { id: "act9", accountId: acc5.id, contactId: ct7.id, activityType: "架電", activityDate: new Date("2026-03-05"), subject: "展示会フォロー架電", content: "展示会で名刺交換。まだ具体ニーズなし。3ヶ月後に再架電", actorId: suzuki.id },
     ],
   });

@@ -6,7 +6,9 @@ const menuItems = [
   { href: "/", label: "ホーム", icon: "🏠" },
   { href: "/accounts", label: "企業", icon: "🏢" },
   { href: "/contacts", label: "担当者", icon: "👤" },
-  { href: "/opportunities", label: "商談", icon: "💼" },
+  { href: "/leads", label: "リード", icon: "📋" },
+  { href: "/deals", label: "商談", icon: "🤝" },
+  { href: "/opportunities", label: "案件", icon: "💼" },
   { href: "/tasks", label: "タスク", icon: "✅" },
   { href: "/activities", label: "活動", icon: "📋" },
 ];

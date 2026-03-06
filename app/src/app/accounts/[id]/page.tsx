@@ -21,10 +21,17 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
           opportunities: { include: { buOwner: true } },
         },
       },
+      leads: {
+        include: { isOwner: true, fsOwner: true, _count: { select: { deals: true } } },
+        orderBy: { updatedAt: "desc" },
+      },
+      deals: {
+        include: { lead: true, owner: true, _count: { select: { opportunities: true } } },
+        orderBy: { updatedAt: "desc" },
+      },
       opportunities: {
         include: {
-          isOwner: true,
-          fsOwner: true,
+          deal: true,
           buOwner: true,
           parentOpportunity: true,
           childOpportunities: true,
@@ -145,10 +152,60 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
         </section>
       </div>
 
+      {/* Leads */}
+      <section className="bg-white rounded-lg shadow p-5 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">リード ({account.leads.length})</h2>
+          <Link href={`/leads/new?accountId=${id}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
+        </div>
+        <div className="space-y-2">
+          {account.leads.map((l) => (
+            <div key={l.id} className="flex items-center justify-between text-sm border-b pb-2">
+              <div className="flex items-center gap-2">
+                <Link href={`/leads/${l.id}`} className="text-blue-600 hover:underline font-medium">{l.name}</Link>
+                <Badge value={l.phase} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">{l.isOwner?.name || "-"}</span>
+                <span className="text-xs text-gray-500">{l.fsOwner?.name || "-"}</span>
+                <span className="text-xs text-gray-400">商談 {l._count.deals}件</span>
+              </div>
+            </div>
+          ))}
+          {account.leads.length === 0 && (
+            <p className="text-gray-500 text-sm">リードはありません</p>
+          )}
+        </div>
+      </section>
+
+      {/* Deals */}
+      <section className="bg-white rounded-lg shadow p-5 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">商談 ({account.deals.length})</h2>
+        </div>
+        <div className="space-y-2">
+          {account.deals.map((d) => (
+            <div key={d.id} className="flex items-center justify-between text-sm border-b pb-2">
+              <div className="flex items-center gap-2">
+                <Link href={`/deals/${d.id}`} className="text-blue-600 hover:underline font-medium">{d.name}</Link>
+                <span className="text-xs text-gray-400">({d.lead.name})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">{d.owner?.name || "-"}</span>
+                <span className="text-xs text-gray-400">案件 {d._count.opportunities}件</span>
+              </div>
+            </div>
+          ))}
+          {account.deals.length === 0 && (
+            <p className="text-gray-500 text-sm">商談はありません</p>
+          )}
+        </div>
+      </section>
+
       {/* Opportunities Tree */}
       <section className="bg-white rounded-lg shadow p-5 mt-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">商談 ({account.opportunities.length})</h2>
+          <h2 className="font-bold text-lg">案件 ({account.opportunities.length})</h2>
           <Link href={`/opportunities/new?accountId=${id}`} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ 追加</Link>
         </div>
         <div className="space-y-3">
@@ -203,15 +260,13 @@ type OppWithRelations = {
   recordType: string;
   phase: string;
   expectedAmount: number | null;
-  isOwner: { name: string } | null;
-  fsOwner: { name: string } | null;
   buOwner: { name: string } | null;
   tasks: { id: string; name: string; status: string; owner: { name: string }; dueDate: Date | null }[];
 };
 
 function OpportunityTree({ opp, allOpps, depth }: { opp: OppWithRelations; allOpps: OppWithRelations[]; depth: number }) {
   const children = allOpps.filter((o) => o.parentOpportunityId === opp.id);
-  const owner = opp.buOwner || opp.fsOwner || opp.isOwner;
+  const owner = opp.buOwner;
 
   return (
     <div className={depth > 0 ? "ml-6 border-l-2 border-gray-200 pl-4" : ""}>

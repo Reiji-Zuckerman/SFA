@@ -110,7 +110,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
           {opp.deal && (
             <div>
               <p className="text-xs text-gray-500">商談</p>
-              <p className="text-sm font-medium text-blue-600">{opp.deal.name}</p>
+              <Link href={`/deals/${opp.deal.id}`} className="text-sm font-medium text-blue-600 hover:underline">{opp.deal.name}</Link>
             </div>
           )}
           {opp.contact && (

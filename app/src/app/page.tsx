@@ -5,10 +5,18 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [accounts, opportunities, tasks, activities] = await Promise.all([
+  const [accounts, leads, deals, opportunities, tasks, activities] = await Promise.all([
     prisma.account.findMany({ include: { mainOwner: true } }),
+    prisma.lead.findMany({
+      include: { account: true, isOwner: true, fsOwner: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.deal.findMany({
+      include: { account: true, owner: true, _count: { select: { opportunities: true } } },
+      orderBy: { updatedAt: "desc" },
+    }),
     prisma.opportunity.findMany({
-      include: { account: true, isOwner: true, fsOwner: true, buOwner: true },
+      include: { account: true, buOwner: true },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.task.findMany({
@@ -22,8 +30,6 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const isLeads = opportunities.filter((o) => o.recordType === "IS_LEAD");
-  const fsDeals = opportunities.filter((o) => o.recordType === "FS_DEAL");
   const slsProjects = opportunities.filter((o) => o.recordType === "SLS_PROJECT");
   const permJobs = opportunities.filter((o) => o.recordType === "PERM_JOB");
   const itssProjects = opportunities.filter((o) => o.recordType === "ITSS_PROJECT");
@@ -41,8 +47,8 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <KPICard label="IS リード数" value={isLeads.length} sub="件" />
-        <KPICard label="FS 商談数" value={fsDeals.length} sub="件" />
+        <KPICard label="リード数" value={leads.length} sub="件" />
+        <KPICard label="商談数" value={deals.length} sub="件" />
         <KPICard label="SLS パイプライン" value={`¥${(slsTotal / 10000).toLocaleString()}万`} sub={`受注: ¥${(slsWon / 10000).toLocaleString()}万`} />
         <KPICard label="PERM/ITSS 求人" value={permJobs.length + itssJobs.length} sub="件" />
       </div>
@@ -52,8 +58,7 @@ export default async function DashboardPage() {
         <section className="bg-white rounded-lg shadow p-5">
           <h2 className="font-bold text-lg mb-4">全社パイプライン</h2>
           <div className="space-y-3">
-            <PipelineRow label="IS リード" items={isLeads} />
-            <PipelineRow label="FS 商談" items={fsDeals} />
+            <PipelineRow label="リード" items={leads} />
             <PipelineRow label="SLS 案件" items={slsProjects} />
             <PipelineRow label="PERM 求人" items={permJobs} />
             <PipelineRow label="ITSS PJ" items={itssProjects} />
